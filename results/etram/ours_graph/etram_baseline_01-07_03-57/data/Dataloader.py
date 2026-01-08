@@ -177,36 +177,19 @@ class EtramNPZDataset(Dataset):
         self.files = sorted(glob.glob(os.path.join(config['dataroot'], split, '*.npz')))
         if len(self.files) == 0:
             raise FileNotFoundError(f'No npz files found in {config["dataroot"]}/{split}')
-        self.stride = self.config.get('sliding_stride',1)
-        self.index = []
-        total_len = self.config['total_len']
-        for f in self.files:
-            with np.load(f) as data:
-                T = int(data['frames'].shape[0])
-            if self.split == 'test':
-                if T >= total_len:
-                    self.index.append((f,0))
-                continue
-            if T < total_len:
-                continue
-            for start in range(0, T - total_len + 1, max(1,self.stride)):
-                self.index.append((f,start))
-        if len(self.index) == 0:
-            raise FileNotFoundError(f'No valid sliding windows found in {config["dataroot"]}/{split} with total_len={total_len}')
 
     def __len__(self):
-        return len(self.index)
+        return len(self.files)
 
     def __getitem__(self, idx):
-        path, start = self.index[idx]
-        data = np.load(path)
+        data = np.load(self.files[idx])
         frames = data['frames']  # (T,2,H,W) uint8
         total_len = self.config['total_len']
-        end = start + total_len
-        if end > frames.shape[0]:
-            start = max(0, frames.shape[0] - total_len)
-            end = start + total_len
-        frames = frames[start:end]
+        # pick a valid contiguous window
+        start = int(data['run_start_idx']) if 'run_start_idx' in data else 0
+        max_start = max(0, frames.shape[0] - total_len)
+        start = min(start, max_start)
+        frames = frames[start:start + total_len]
 
         # to tensor in (T,H,W,C) and normalize to [-0.5, 0.5]
         seq = torch.from_numpy(frames).float() / 255.0 - 0.5

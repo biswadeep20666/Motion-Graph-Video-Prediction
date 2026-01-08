@@ -661,12 +661,6 @@ def visualization_check_video(save_path,epoch,image_list,valid=False,is_train=Fa
 
     whole_image = np.vstack(vis_image)
 
-    if whole_image.shape[-1] == 2:
-        # Map ON/OFF channels to RGB for visualization.
-        vis = np.zeros((whole_image.shape[0], whole_image.shape[1], 3), dtype=whole_image.dtype)
-        vis[...,0] = whole_image[...,0]
-        vis[...,1] = whole_image[...,1]
-        whole_image = vis
     if whole_image.shape[-1] == 1:
         plt.imshow(whole_image,interpolation="nearest",cmap='gray')
     else:
@@ -803,3 +797,4 @@ class L1Loss(nn.Module):
                 weights. Default: None.
         """
         return self.loss_weight * F.l1_loss(pred, target, weight, reduction=self.reduction)
+
